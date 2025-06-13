@@ -1,5 +1,5 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
-
+import { createContext, useContext, useState } from 'react';
+import type { ReactNode } from 'react';
 export interface User {
   id: string;
   name: string;
@@ -51,6 +51,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
       name,
       percentage,
       dollarAmount,
+        calculatedPercentage: 0,
+        calculatedDollarAmount: 0,
       hasFixedPercentage: percentage !== undefined && percentage > 0,
       hasFixedDollarAmount: dollarAmount !== undefined && dollarAmount > 0
     };
@@ -101,8 +103,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
   };
 
   const getCalculatedAmountsForBill = (bill: Bill) => {
-    const fixedPercentageUsers = users.filter(user => user.hasFixedPercentage);
-    const fixedDollarUsers = users.filter(user => user.hasFixedDollarAmount);
     const flexibleUsers = users.filter(user => !user.hasFixedPercentage && !user.hasFixedDollarAmount);
     
     const totalFixedPercentage = getTotalFixedPercentage();
@@ -149,8 +149,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const totalAmount = getTotalAmountAllBills();
     if (totalAmount === 0) return [];
     
-    const fixedPercentageUsers = users.filter(user => user.hasFixedPercentage);
-    const fixedDollarUsers = users.filter(user => user.hasFixedDollarAmount);
     const flexibleUsers = users.filter(user => !user.hasFixedPercentage && !user.hasFixedDollarAmount);
     
     const totalFixedPercentage = getTotalFixedPercentage();

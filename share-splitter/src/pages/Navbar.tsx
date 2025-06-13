@@ -1,9 +1,10 @@
-import { Button, Modal, Input, Form, InputNumber } from "antd";
-import { useState } from "react";
-import { useUsers } from "../context/UserContext";
+import { useState } from 'react';
+import { Button, Modal, Form, Input, InputNumber, message } from 'antd';
+import { PlusOutlined } from '@ant-design/icons';
+import { useUsers } from '../context/UserContext';
 
 function Navbar() {
-  const { users, addUser } = useUsers();
+  const { addUser } = useUsers();
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [form] = Form.useForm();
 
@@ -12,67 +13,59 @@ function Navbar() {
   };
 
   const handleOk = () => {
-    form.validateFields().then((values) => {
-      const { name, percentage } = values;
-      // If percentage is 0, null, or undefined, treat as flexible user
-      const finalPercentage = percentage > 0 ? percentage : undefined;
-      addUser(name, finalPercentage);
-      form.resetFields();
-      setIsModalVisible(false);
-    }).catch((errorInfo) => {
-      console.log('Validation failed:', errorInfo);
-    });
+    form
+      .validateFields()
+      .then((values) => {
+        const { name, percentage, dollarAmount } = values;
+        
+        // Validate that user didn't enter both percentage and dollar amount
+        if (percentage > 0 && dollarAmount > 0) {
+          message.error('Please enter either a percentage OR a dollar amount, not both');
+          return;
+        }
+        
+        const finalPercentage = percentage > 0 ? percentage : undefined;
+        const finalDollarAmount = dollarAmount > 0 ? dollarAmount : undefined;
+        
+        addUser(name, finalPercentage, finalDollarAmount);
+        form.resetFields();
+        setIsModalVisible(false);
+        message.success('Participant added successfully!');
+      })
+      .catch((info) => {
+        console.log('Validate Failed:', info);
+      });
   };
 
   const handleCancel = () => {
-    form.resetFields();
     setIsModalVisible(false);
+    form.resetFields();
   };
 
   return (
     <>
-      <nav className="navbar">
-        <div className="flex items-center">
-          <a
-            href="/"
-            className="text-xl font-bold text-blue-600 hover:text-blue-800"
-          >
-            Share Splitter
-          </a>
-        </div>
-        <div className="flex space-x-6">
-          <a
-            href="/about"
-            className="text-gray-700 hover:text-blue-600 transition-colors"
-          >
-            About
-          </a>
-          <a
-            href="/contact"
-            className="text-gray-700 hover:text-blue-600 transition-colors"
-          >
-            Contact
-          </a>
+      <div className="bg-white shadow-md px-6 py-4 mb-6">
+        <div className="flex justify-between items-center max-w-4xl mx-auto">
+          <h1 className="text-xl font-bold text-gray-800">Share Splitter</h1>
           <Button
             type="primary"
-            className="bg-blue-500 hover:bg-blue-600 text-white"
+            icon={<PlusOutlined />}
             onClick={showModal}
+            className="bg-blue-500 hover:bg-blue-600"
           >
-            Add User ({users.length} users)
+            Add Participant
           </Button>
         </div>
-      </nav>
+      </div>
 
       <Modal
-        title="Add New User"
+        title="Add New Participant"
         open={isModalVisible}
         onOk={handleOk}
         onCancel={handleCancel}
-        okText="Add User"
+        okText="Add Participant"
         cancelText="Cancel"
-        okButtonProps={{
-          className: "bg-blue-500 hover:bg-blue-600"
-        }}
+        okButtonProps={{ className: "bg-blue-500 hover:bg-blue-600" }}
       >
         <Form
           form={form}
@@ -93,7 +86,7 @@ function Navbar() {
           <Form.Item
             label="Percentage (%)"
             name="percentage"
-            help="Leave empty or set to 0 to split remaining percentage equally among flexible users"
+            help="Enter a percentage (e.g., 25 for 25%)"
           >
             <InputNumber
               min={0}
@@ -102,6 +95,22 @@ function Navbar() {
               style={{ width: '100%' }}
             />
           </Form.Item>
+
+          <Form.Item
+            label="Dollar Amount ($)"
+            name="dollarAmount"
+            help="Enter a fixed dollar amount (e.g., 50 for $50)"
+          >
+            <InputNumber
+              min={0}
+              placeholder="Enter dollar amount (optional)"
+              style={{ width: '100%' }}
+            />
+          </Form.Item>
+
+          <div className="text-sm text-gray-600 mt-2">
+            <strong>Note:</strong> Leave both empty for flexible split, or enter either percentage OR dollar amount (not both)
+          </div>
         </Form>
       </Modal>
     </>

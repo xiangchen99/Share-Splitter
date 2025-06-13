@@ -7,6 +7,7 @@ export interface User {
   dollarAmount?: number;
   hasFixedPercentage: boolean;
   hasFixedDollarAmount: boolean;
+  calculatedPercentage?: number;
 }
 
 export interface Bill {
@@ -51,8 +52,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
       name,
       percentage,
       dollarAmount,
-        calculatedPercentage: 0,
-        calculatedDollarAmount: 0,
       hasFixedPercentage: percentage !== undefined && percentage > 0,
       hasFixedDollarAmount: dollarAmount !== undefined && dollarAmount > 0
     };

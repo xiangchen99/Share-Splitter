@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Card, Typography, Input, Button, Alert, Tag, Modal, Form, InputNumber, message } from 'antd';
-import { EditOutlined } from '@ant-design/icons';
+import { Card, Typography, Input, Button, Alert, Tag, Modal, Form, InputNumber, message, Popconfirm } from 'antd';
+import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useUsers } from '../context/UserContext';
 
 const { Title, Text } = Typography;
@@ -15,7 +15,8 @@ function UsersList() {
     getTotalFixedPercentage, 
     getTotalFixedDollarAmount,
     getCalculatedAmountsAllBills,
-    getTotalAmountAllBills
+    getTotalAmountAllBills,
+    clearAllData
   } = useUsers();
   
   const [newName, setNewName] = useState('');
@@ -44,7 +45,7 @@ function UsersList() {
     setNewDollarAmount(0);
   };
 
-  const handleEditUser = (user: any) => {
+  const handleEditUser = (user: { id: string; name: string; percentage?: number; dollarAmount?: number }) => {
     setEditingUser(user.id);
     editForm.setFieldsValue({
       name: user.name,
@@ -83,6 +84,11 @@ function UsersList() {
     editForm.resetFields();
   };
 
+  const handleClearAllData = () => {
+    clearAllData();
+    message.success('All data cleared successfully!');
+  };
+
   const totalFixedPercentage = getTotalFixedPercentage();
   const totalFixedDollarAmount = getTotalFixedDollarAmount();
   const calculatedAmounts = getCalculatedAmountsAllBills();
@@ -93,7 +99,27 @@ function UsersList() {
 
   return (
     <div className="max-w-4xl mx-auto p-6">
-      <Title level={2}>Split Participants</Title>
+      <div className="flex justify-between items-center mb-6">
+        <Title level={2}>Split Participants</Title>
+        {(users.length > 0 || bills.length > 0) && (
+          <Popconfirm
+            title="Clear all data"
+            description="Are you sure you want to delete all participants and bills? This cannot be undone."
+            onConfirm={handleClearAllData}
+            okText="Yes, clear all"
+            cancelText="Cancel"
+            okType="danger"
+          >
+            <Button 
+              danger 
+              icon={<DeleteOutlined />}
+              size="small"
+            >
+              Clear All Data
+            </Button>
+          </Popconfirm>
+        )}
+      </div>
       
       {/* Add User Form */}
       <Card className="mb-6">

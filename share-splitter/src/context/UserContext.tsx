@@ -1,5 +1,6 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
+
 export interface User {
   id: string;
   name: string;
@@ -30,6 +31,7 @@ interface UserContextType {
   getCalculatedAmountsForBill: (bill: Bill) => { user: User; amount: number }[];
   getTotalAmountAllBills: () => number;
   getCalculatedAmountsAllBills: () => { user: User; totalAmount: number }[];
+  clearAllData: () => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -42,9 +44,73 @@ export const useUsers = () => {
   return context;
 };
 
+// Storage keys
+const STORAGE_KEYS = {
+  USERS: 'share-splitter-users',
+  BILLS: 'share-splitter-bills'
+};
+
+// Helper functions for localStorage
+const saveToStorage = (key: string, data: unknown) => {
+  try {
+    console.log(`Saving to localStorage [${key}]:`, data); // Debug log
+    localStorage.setItem(key, JSON.stringify(data));
+    console.log(`Successfully saved to localStorage [${key}]`); // Debug log
+  } catch (error) {
+    console.error('Error saving to localStorage:', error);
+  }
+};
+
+const loadFromStorage = <T,>(key: string, defaultValue: T): T => {
+  try {
+    const stored = localStorage.getItem(key);
+    console.log(`Loading from localStorage [${key}]:`, stored); // Debug log
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      // Special handling for bills to convert date strings back to Date objects
+      if (key === STORAGE_KEYS.BILLS && Array.isArray(parsed)) {
+        const result = parsed.map(bill => ({
+          ...bill,
+          createdAt: new Date(bill.createdAt)
+        })) as T;
+        console.log(`Parsed bills from localStorage:`, result); // Debug log
+        return result;
+      }
+      console.log(`Parsed data from localStorage [${key}]:`, parsed); // Debug log
+      return parsed;
+    }
+  } catch (error) {
+    console.error('Error loading from localStorage:', error);
+  }
+  console.log(`Using default value for [${key}]:`, defaultValue); // Debug log
+  return defaultValue;
+};
+
 export function UserProvider({ children }: { children: ReactNode }) {
-  const [users, setUsers] = useState<User[]>([]);
-  const [bills, setBills] = useState<Bill[]>([]);
+  // Initialize state from localStorage
+  const [users, setUsers] = useState<User[]>(() => {
+    const loadedUsers = loadFromStorage(STORAGE_KEYS.USERS, []);
+    console.log('Initial users loaded:', loadedUsers);
+    return loadedUsers;
+  });
+  
+  const [bills, setBills] = useState<Bill[]>(() => {
+    const loadedBills = loadFromStorage(STORAGE_KEYS.BILLS, []);
+    console.log('Initial bills loaded:', loadedBills);
+    return loadedBills;
+  });
+
+  // Save to localStorage whenever users change
+  useEffect(() => {
+    console.log('Users state changed, saving to localStorage:', users);
+    saveToStorage(STORAGE_KEYS.USERS, users);
+  }, [users]);
+
+  // Save to localStorage whenever bills change
+  useEffect(() => {
+    console.log('Bills state changed, saving to localStorage:', bills);
+    saveToStorage(STORAGE_KEYS.BILLS, bills);
+  }, [bills]);
 
   const addUser = (name: string, percentage?: number, dollarAmount?: number) => {
     const newUser: User = {
@@ -55,14 +121,21 @@ export function UserProvider({ children }: { children: ReactNode }) {
       hasFixedPercentage: percentage !== undefined && percentage > 0,
       hasFixedDollarAmount: dollarAmount !== undefined && dollarAmount > 0
     };
-    setUsers(prev => [...prev, newUser]);
+    console.log('Adding new user:', newUser);
+    setUsers(prev => {
+      const newUsers = [...prev, newUser];
+      console.log('New users state:', newUsers);
+      return newUsers;
+    });
   };
 
   const removeUser = (id: string) => {
+    console.log('Removing user with id:', id);
     setUsers(prev => prev.filter(user => user.id !== id));
   };
 
   const updateUser = (id: string, name: string, percentage?: number, dollarAmount?: number) => {
+    console.log('Updating user:', { id, name, percentage, dollarAmount });
     setUsers(prev => prev.map(user => 
       user.id === id ? { 
         ...user, 
@@ -82,10 +155,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
       description,
       createdAt: new Date()
     };
-    setBills(prev => [...prev, newBill]);
+    console.log('Adding new bill:', newBill);
+    setBills(prev => {
+      const newBills = [...prev, newBill];
+      console.log('New bills state:', newBills);
+      return newBills;
+    });
   };
 
   const removeBill = (id: string) => {
+    console.log('Removing bill with id:', id);
     setBills(prev => prev.filter(bill => bill.id !== id));
   };
 
@@ -186,6 +265,19 @@ export function UserProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const clearAllData = () => {
+    console.log('Clearing all data');
+    setUsers([]);
+    setBills([]);
+    // Also clear from localStorage
+    localStorage.removeItem(STORAGE_KEYS.USERS);
+    localStorage.removeItem(STORAGE_KEYS.BILLS);
+    console.log('Data cleared from localStorage');
+  };
+
+  // Debug log current state
+  console.log('Current state - Users:', users, 'Bills:', bills);
+
   return (
     <UserContext.Provider value={{
       users,
@@ -199,7 +291,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
       getTotalFixedDollarAmount,
       getCalculatedAmountsForBill,
       getTotalAmountAllBills,
-      getCalculatedAmountsAllBills
+      getCalculatedAmountsAllBills,
+      clearAllData
     }}>
       {children}
     </UserContext.Provider>
